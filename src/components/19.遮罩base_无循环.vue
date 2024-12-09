@@ -33,7 +33,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onUnmounted } from "vue";
+import { ref, onMounted } from "vue";
 
 const myCanvas = ref(null);
 const myImage = ref(null);
@@ -55,7 +55,6 @@ const rotationAngle = ref(0);
 const maskHeight = ref(0);
 // 添加一个标志位来控制遮罩动画是否正在进行
 const isMasking = ref(false);
-const scale = ref(1); // 默认缩放比例为1（无缩放）
 
 // 当图像加载时调用
 function onImageLoad() {
@@ -83,45 +82,11 @@ onMounted(() => {
 
   // 将原始图像绘制到备用画布
   offscreenCtx.drawImage(myImage.value, 0, 0);
-  // 添加鼠标滚轮事件监听器
-  myCanvas.value.addEventListener("wheel", handleWheel);
 });
-// 确保在组件卸载时移除事件监听器，避免内存泄漏
-onUnmounted(() => {
-  myCanvas.value.removeEventListener("wheel", handleWheel);
-});
-function handleWheel(event) {
-  event.preventDefault(); // 阻止默认行为，例如页面滚动
 
-  // 计算新的缩放比例
-  if (event.deltaY < 0) {
-    // 向上滚动，放大
-    scale.value *= 1.1;
-  } else {
-    // 向下滚动，缩小
-    scale.value /= 1.1;
-  }
-
-  // 限制最小和最大缩放比例
-  scale.value = Math.max(0.5, Math.min(scale.value, 3));
-
-  // 重新绘制图像以反映新的缩放比例
-  drawImage();
-}
 // 在这里绘制原始图像
 function drawImage() {
-  ctx.clearRect(0, 0, myCanvas.value.width, myCanvas.value.height); // 清除画布
-
-  // 设置变换矩阵，使用 translate 和 scale 方法进行缩放
-  ctx.save();
-  ctx.translate(myCanvas.value.width / 2, myCanvas.value.height / 2);
-  ctx.scale(scale.value, scale.value);
-  ctx.translate(-myCanvas.value.width / 2, -myCanvas.value.height / 2);
-
-  // 绘制图像
   ctx.drawImage(myImage.value, 0, 0);
-
-  ctx.restore(); // 恢复之前的变换矩阵
 }
 // 开始拖拽
 function startDrag(event) {

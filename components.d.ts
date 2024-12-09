@@ -25,6 +25,8 @@ declare module 'vue' {
     '16.裁剪perfect': typeof import('./src/components/16.裁剪perfect.vue')['default']
     '17.图片90度旋转': typeof import('./src/components/17.图片90度旋转.vue')['default']
     '18.遮罩base': typeof import('./src/components/18.遮罩base.vue')['default']
+    '19.遮罩base_无循环': typeof import('./src/components/19.遮罩base_无循环.vue')['default']
+    '20.滚轮放大缩小功能': typeof import('./src/components/20.滚轮放大缩小功能.vue')['default']
     ElButton: typeof import('element-plus/es')['ElButton']
     ElCarousel: typeof import('element-plus/es')['ElCarousel']
     ElCarouselItem: typeof import('element-plus/es')['ElCarouselItem']
