@@ -22,6 +22,7 @@ declare module 'vue' {
     '13.vue切片图层TileLayer切换地图底图，图层叠加效果': typeof import('./src/components/13.vue切片图层TileLayer切换地图底图，图层叠加效果.vue')['default']
     '14.裁剪base': typeof import('./src/components/14.裁剪base.vue')['default']
     '15.裁剪模糊版本': typeof import('./src/components/15.裁剪模糊版本.vue')['default']
+    '16.裁剪perfect': typeof import('./src/components/16.裁剪perfect.vue')['default']
     ElButton: typeof import('element-plus/es')['ElButton']
     ElCarousel: typeof import('element-plus/es')['ElCarousel']
     ElCarouselItem: typeof import('element-plus/es')['ElCarouselItem']
