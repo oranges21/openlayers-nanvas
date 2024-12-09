@@ -24,7 +24,7 @@
     >
       裁剪
     </button>
-    <button @click="drawRotatedImage(180)">旋转 45°</button>
+    <button @click="drawRotatedImage(180)">旋转</button>
     <button @click="drawMaskedImage('rgba(0,0,0,0.5)')">遮罩</button>
     <button @click="drawScaledImage(0.5, 0.5)">缩小 50%</button>
     <button @click="resetCanvas">重置</button>
@@ -48,6 +48,8 @@ const clipEndX = ref(0);
 const clipEndY = ref(0);
 // 添加一个新的ref来保存备用画布
 const offscreenCanvas = ref(null);
+// 在组件的状态中添加一个变量来跟踪当前的旋转角度
+const rotationAngle = ref(0);
 
 // 当图像加载时调用
 function onImageLoad() {
@@ -206,63 +208,16 @@ function drawClippedImage({ clipStartX, clipStartY, clipEndX, clipEndY }) {
 
   ctx.restore(); // 恢复之前保存的绘图状态
 }
-// function drawClippedImage(isPreview, clipRect = null) {
-//   // 清除画布
-//   ctx.clearRect(0, 0, myCanvas.value.width, myCanvas.value.height);
-
-//   const rect = clipRect || {
-//     x: startX,
-//     y: startY,
-//     width: currentX - startX,
-//     height: currentY - startY,
-//   };
-//   if (isPreview) {
-//     console.log("预览裁剪");
-//     // 预览裁剪框
-//     ctx.strokeStyle = "red";
-//     ctx.strokeRect(rect.x, rect.y, rect.width, rect.height);
-//   } else if (rect.width !== undefined && rect.height !== undefined) {
-//     console.log("应用裁剪");
-//     const { x, y, width, height } = rect;
-//     // 先绘制原始图像，以确保我们从一个干净的状态开始
-//     drawImage();
-//     // 应用裁剪
-//     ctx.save();
-//     ctx.beginPath();
-//     ctx.rect(x, y, width, height);
-//     ctx.clip();
-//     // 在裁剪区域内重绘图像的部分
-//     ctx.drawImage(
-//       myImage.value,
-//       x,
-//       y, // 源图像中的x, y坐标
-//       width,
-//       height, // 源图像中的宽度和高度
-//       x,
-//       y, // 目标画布上的x, y坐标
-//       width,
-//       height // 目标画布上的宽度和高度
-//     );
-//     ctx.restore();
-
-//     // 更新画布尺寸为裁剪区域大小（可选）
-//     // myCanvas.value.width = Math.abs(currentX - startX);
-//     // myCanvas.value.height = Math.abs(currentY - startY);
-
-//     // 重置坐标以便下一次裁剪
-//     startX = currentX = undefined;
-//     startY = currentY = undefined;
-//   }
-// }
 // 旋转
 function drawRotatedImage(angle) {
+  rotationAngle.value += angle;
   ctx.clearRect(0, 0, myCanvas.value.width, myCanvas.value.height); // 清除画布
   const x = myCanvas.value.width / 2;
   const y = myCanvas.value.height / 2;
 
   ctx.save();
   ctx.translate(x, y);
-  ctx.rotate((angle * Math.PI) / 180); // 将角度转换为弧度
+  ctx.rotate((rotationAngle.value * Math.PI) / 180); // 将角度转换为弧度
   ctx.drawImage(
     myImage.value,
     -myImage.value.width / 2,
