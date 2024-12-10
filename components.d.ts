@@ -28,6 +28,7 @@ declare module 'vue' {
     '19.遮罩base_无循环': typeof import('./src/components/19.遮罩base_无循环.vue')['default']
     '20.滚轮放大缩小功能': typeof import('./src/components/20.滚轮放大缩小功能.vue')['default']
     '23.聚合demo': typeof import('./src/components/23.聚合demo.vue')['default']
+    '24.定位demo': typeof import('./src/components/24.定位demo.vue')['default']
     ElButton: typeof import('element-plus/es')['ElButton']
     ElCarousel: typeof import('element-plus/es')['ElCarousel']
     ElCarouselItem: typeof import('element-plus/es')['ElCarouselItem']
