@@ -327,7 +327,7 @@ const initMap = () => {
       //给点选和框选两个分支，其他的按照原来的值定义的type
       drawInteraction = new Draw({
         source: vectorSource, // 使用省份边界向量源作为临时绘图源
-        type: type === "box" ? "Square" : type, // 框选实际是画一个矩形
+        type: type === "box" ? "LineString" : type, // 框选实际是画一个矩形
       });
       map.addInteraction(drawInteraction);
       drawInteraction.on("drawend", (event) => {
@@ -356,10 +356,37 @@ const initMap = () => {
         vectorSource.clear();
         // 如果是框选，则移除绘制的矩形
         if (type === "box") {
+          // 创建矩形多边形并添加到源中
+          const coordinates = geometry.getCoordinates();
+          if (coordinates.length === 2) {
+            // 确保我们有两个点
+            const start = coordinates[0];
+            const end = coordinates[1];
+            const rectangleCoords = [
+              [start[0], start[1]], // 左上角
+              [end[0], start[1]], // 右上角
+              [end[0], end[1]], // 右下角
+              [start[0], end[1]], // 左下角
+              [start[0], start[1]], // 回到起点闭合多边形
+            ];
+            // 创建新的多边形特征
+            const polygonFeature = new Feature({
+              geometry: new Polygon([rectangleCoords]),
+            });
+
+            // 添加多边形到向量源并移除原来的 LineString
+            vectorSource.addFeature(polygonFeature);
+            vectorSource.removeFeature(event.feature);
+          }
           map.removeInteraction(drawInteraction);
           drawInteraction = null;
         }
       });
+      // 如果是框选，则移除绘制的矩形
+      // if (type === "box") {
+      //   map.removeInteraction(drawInteraction);
+      //   drawInteraction = null;
+      // }
     }
   };
   // 添加选择模式切换按钮或下拉菜单
