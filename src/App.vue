@@ -24,6 +24,18 @@
       <div id="popup-content"></div>
     </div>
     <button id="locate-to-chengdu" @click="locateToChengdu">定位到成都</button>
+    <!-- 选择模式切换 -->
+    <select
+      id="selection-type"
+      v-model="selectionType"
+      @change="onSelectionChange"
+    >
+      <option value="point">点选</option>
+      <option value="box">框选</option>
+      <option value="Circle">圈选</option>
+      <option value="Polygon">面选</option>
+      <option value="LineString">线选</option>
+    </select>
   </div>
 </template>
 
@@ -44,7 +56,7 @@ import GeoJSON from "ol/format/GeoJSON";
 import { Style, Fill, Circle as CircleStyle } from "ol/style";
 // 矢量图层
 import VectorLayer from "ol/layer/Vector";
-import { onMounted } from "vue";
+import { onMounted, ref } from "vue";
 // 导入中国地图的 GeoJSON 数据
 import { areaGeo } from "./geoJson/china.js";
 // 标记相关的导入
@@ -54,24 +66,24 @@ import Feature from "ol/Feature";
 import {
   defaults as defaultInteractions,
   DragRotateAndZoom,
-  DoubleClickZoom, // 导入 DoubleClickZoom 交互
 } from "ol/interaction";
-import { defaults as defaultControls, FullScreen } from "ol/control";
-import MousePosition from "ol/control/MousePosition";
-import { createStringXY } from "ol/coordinate";
-import OverviewMap from "ol/control/OverviewMap";
-import { XYZ } from "ol/source";
-import { ScaleLine } from "ol/control";
 // Overlay 和坐标转换相关导入
 import { Overlay } from "ol";
-import { fromLonLat, toLonLat } from "ol/proj";
+import { fromLonLat } from "ol/proj";
 import Icon from "ol/style/Icon";
 //聚合
 import Cluster from "ol/source/Cluster";
 import Text from "ol/style/Text";
+//绘图
+import { Select } from "ol/interaction";
+import { Draw } from "ol/interaction";
 
 let markerSource;
 let locateToChengdu;
+let selectInteraction; // 用于存储当前的选择交互
+let drawInteraction; // 用于存储绘图交互
+let onSelectionChange;
+const selectionType = ref("point"); // 默认选择类型为点选
 // 当组件挂载时调用 initMap 函数初始化地图
 onMounted(() => {
   initMap();
@@ -94,9 +106,7 @@ onMounted(() => {
     markerSource.addFeature(pointFeature); // 将新标记添加到向量源
   }
 });
-
 const initMap = () => {
-  console.log("areaGeo", areaGeo);
   // 创建一个向量源并读取 GeoJSON 数据，用于显示中国的省份边界
   const vectorSource = new VectorSource({
     features: new GeoJSON().readFeatures(areaGeo, {
@@ -104,8 +114,6 @@ const initMap = () => {
       featureProjection: "EPSG:3857",
     }),
   });
-  console.log("vectorSource", vectorSource);
-  console.log("vectorSource.getFeatures()", vectorSource.getFeatures());
   // 定义省份边界的样式：填充色和描边颜色及宽度
   const style = new Style({
     // fill: new Fill({
@@ -116,40 +124,15 @@ const initMap = () => {
       width: 1, // 描边宽度
     }),
   });
-
   // 使用定义好的样式创建一个向量图层来展示中国省份边界
   const vectorLayer = new VectorLayer({
     source: vectorSource,
     style: style,
   });
-
-  // 创建 overview map 控件（鹰眼图），用于提供整个地图的概览
-  const overviewMapControl = new OverviewMap({
-    layers: [
-      new TileLayer({
-        source: new XYZ({
-          url: "https://{a-c}.tile.openstreetmap.org/{z}/{x}/{y}.png", // 使用 OSM 瓦片服务
-          attributions:
-            '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
-        }),
-      }),
-    ],
-  });
-
-  // 向地图添加鼠标位置控制，显示当前鼠标的地理坐标
-  const mousePositionControl = new MousePosition({
-    coordinateFormat: createStringXY(5), // 坐标格式化为字符串，保留小数点后五位
-    projection: "EPSG:4326", // 使用 WGS84 投影系统
-    className: "custom-mouse-position", // 自定义样式类名
-    target: document.getElementById("map"), // 将坐标信息显示在地图容器中
-    undefinedHTML: "&nbsp;", // 如果没有定义坐标则显示空格
-  });
-
   // 获取 DOM 元素以创建 Popup
   const container = document.getElementById("popup");
   const closer = document.getElementById("popup-closer");
   const content = document.getElementById("popup-content");
-
   // 创建 Overlay 对象，用于实现 Popup 功能
   const overlay = new Overlay({
     element: container, // Popup 的 HTML 元素
@@ -160,7 +143,6 @@ const initMap = () => {
       duration: 250, // 平移动画持续时间
     },
   });
-
   // 设置当点击关闭按钮时隐藏 Popup 的逻辑
   closer.onclick = () => {
     overlay.setPosition(undefined); // 移除 Popup 的位置属性，使其不可见
@@ -168,7 +150,6 @@ const initMap = () => {
     closer.blur(); // 移除焦点
     return false; // 防止默认行为
   };
-
   // 创建一个新的向量源用于用户标记
   markerSource = new VectorSource();
   // 使用 Cluster 源包装原始的向量源
@@ -176,10 +157,10 @@ const initMap = () => {
     distance: 40, // 聚合的距离阈值，单位是像素
     source: markerSource,
   });
+  //聚合图样式判断
   function clusterStyleFunction(feature) {
     const size = feature.get("features").length;
     let style;
-
     if (size === 1) {
       // 如果只有一个点，则使用普通图标样式
       style = new Style({
@@ -215,42 +196,13 @@ const initMap = () => {
         }),
       });
     }
-
     return style;
   }
-  // 定义用户标记的样式：圆形图标及其填充和描边颜色
-  // const markerStyle = new Style({
-  //   image: new CircleStyle({
-  //     radius: 7, // 圆形半径
-  //     fill: new Fill({ color: "#ffcc33" }), // 黄色填充
-  //     stroke: new Stroke({
-  //       color: "#fff", // 白色描边
-  //       width: 2, // 描边宽度
-  //     }),
-  //   }),
-  // });
-  // 定义用户标记的样式：使用图片图标
-  const markerStyle = new Style({
-    image: new Icon({
-      anchor: [0.5, 1], // 图标的锚点位置，这里设置为图标的底部中心
-      anchorXUnits: "fraction", // 锚点的X坐标单位（基于图标宽度的比例）
-      anchorYUnits: "fraction", // 锚点的Y坐标单位（基于图标高度的比例）
-      src: "https://img2.baidu.com/it/u=1337068678,3064275007&fm=253&fmt=auto&app=120&f=JPEG?w=500&h=750", // 替换为你的图片URL
-      scale: 0.03, // 图标缩放比例，默认是1
-    }),
-  });
-
-  // 使用定义好的样式创建一个向量图层来展示用户标记
-  // const markerLayer = new VectorLayer({
-  //   source: markerSource,
-  //   style: markerStyle,
-  // });
   // 使用定义好的样式函数创建一个向量图层来展示用户标记和聚合点
   const markerLayer = new VectorLayer({
     source: clusterSource,
     style: clusterStyleFunction,
   });
-
   // 创建地图实例，包含基础图层、经纬网图层、省份边界图层和用户标记图层
   const map = new Map({
     layers: [
@@ -266,20 +218,11 @@ const initMap = () => {
       zoom: 4, // 设置初始缩放级别
       projection: "EPSG:3857", // 使用 Web Mercator 投影系统
     }),
-    controls: defaultControls({ zoom: true }).extend([overviewMapControl]), // 添加默认控件和自定义控件
     interactions: defaultInteractions({ doubleClickZoom: false }).extend([
       new DragRotateAndZoom(),
     ]), // 添加默认交互和自定义交互
     overlays: [overlay], // 添加 Popup Overlay
   });
-
-  // 添加全屏控件到地图
-  map.addControl(new FullScreen());
-  // 添加鼠标位置控件到地图
-  map.addControl(mousePositionControl);
-  // 添加比例尺控件到地图
-  map.addControl(new ScaleLine());
-
   // 监听地图上的单击事件，用于添加新标记或显示现有标记的 Popup
   let selectedMarker = null;
   map.on("singleclick", (evt) => {
@@ -315,27 +258,11 @@ const initMap = () => {
       }
     }
   });
-  map.on("dblclick", (evt) => {
-    const coordinate = evt.coordinate; //获取双击的坐标
-    const feature = map.forEachFeatureAtPixel(evt.pixel, function (feature) {
-      return feature; //检查双击位置是否有特征（即标记）
-    });
-    if (feature) {
-      // 如果双击的是标记，则移除该标记
-      markerSource.removeFeature(feature); // 从向量源中移除标记
-      selectedMarker = null; // 清除选中的标记
-
-      // 确保 Popup 不可见
-      overlay.setPosition(undefined); // 移除 Popup 位置
-      container.classList.remove("ol-popup-visible"); // 隐藏 Popup
-    }
-  });
-  // 定义一个函数来处理定位到成都的操作
+  //定位功能： 定义一个函数来处理定位到成都的操作
   locateToChengdu = () => {
     // 成都的坐标需要转换为EPSG:3857投影系统下的坐标
     const chengduLonLat = [104.065735, 30.659462]; // 成都经纬度坐标
     const chengduCoordinate = fromLonLat(chengduLonLat);
-
     // 使用 animate 方法平滑地改变地图视图的位置和缩放级别
     map.getView().animate({
       center: chengduCoordinate,
@@ -343,6 +270,108 @@ const initMap = () => {
       duration: 2000, // 动画持续时间，单位是毫秒
     });
   };
+
+  // 定义选择条件函数
+  function singleClick(mapBrowserEvent) {
+    return mapBrowserEvent.type === "click";
+  }
+  // 点选交互
+  function pointSelection() {
+    select("point");
+  }
+  // 框选交互
+  function boxSelection() {
+    select("Square");
+  }
+  // 圈选交互
+  function circleSelection() {
+    select("Circle");
+  }
+  // 面选交互
+  function polygonSelection() {
+    select("Polygon");
+  }
+  // 线选交互（选择靠近线的目标）
+  function lineSelection() {
+    select("LineString");
+  }
+  // 创建 Select 交互实例，用于选择特征
+  const select = (type) => {
+    console.log("select函数内type：", type);
+    console.log("储存的当前选择交互", selectInteraction);
+    console.log("储存的当前绘图交互", drawInteraction);
+    if (selectInteraction) {
+      map.removeInteraction(selectInteraction);
+    }
+    if (drawInteraction) {
+      map.removeInteraction(drawInteraction);
+    }
+    //如果是点选
+    if (type === "point") {
+      // 如果是点选则新增单击的地图交互
+      selectInteraction = new Select({
+        condition: singleClick,
+      });
+      // 添加选择事件监听器，用于处理点选逻辑
+      selectInteraction.on("select", function (event) {
+        const selectedFeatures = event.selected; // 获取被选中的特征列表
+
+        // 遍历被选中的特征并打印它们的坐标
+        selectedFeatures.forEach((feature) => {
+          const coord = feature.getGeometry().getCoordinates();
+          console.log("Selected point coordinates:", coord);
+        });
+      });
+      map.addInteraction(selectInteraction);
+    } else {
+      //给点选和框选两个分支，其他的按照原来的值定义的type
+      drawInteraction = new Draw({
+        source: vectorSource, // 使用省份边界向量源作为临时绘图源
+        type: type === "box" ? "Square" : type, // 框选实际是画一个矩形
+      });
+      map.addInteraction(drawInteraction);
+      drawInteraction.on("drawend", (event) => {
+        const geometry = event.feature.getGeometry();
+        let extent;
+        if (geometry.getType() === "Point") {
+          extent = geometry.getExtent();
+        } else {
+          extent = geometry.getExtent();
+        }
+        // 根据不同选择类型计算符合条件的特征
+        const features = [];
+        markerSource.forEachFeature((feature) => {
+          const geom = feature.getGeometry();
+          if (geom.intersectsExtent(extent)) {
+            features.push(feature);
+          }
+        });
+        // 打印所有被选中的特征坐标
+        console.log("Selected features coordinates:");
+        features.forEach((feature) => {
+          const coord = feature.getGeometry().getCoordinates();
+          console.log(coord);
+        });
+        // 移除绘制的几何体
+        vectorSource.clear();
+        // 如果是框选，则移除绘制的矩形
+        if (type === "box") {
+          map.removeInteraction(drawInteraction);
+          drawInteraction = null;
+        }
+      });
+    }
+  };
+  // 添加选择模式切换按钮或下拉菜单
+  // 这里假设你已经有了一个选择模式切换的UI元素
+  onSelectionChange = (e) => {
+    selectionType.value = e.target.value;
+    console.log(e.target.value);
+    select(selectionType.value);
+  };
+  // 初始化默认的选择交互
+  //首次会加载一次
+  select(selectionType.value);
   console.log("init finished"); // 初始化完成后的日志输出
 };
 </script>
@@ -448,5 +477,11 @@ const initMap = () => {
 
 .el-carousel__item:nth-child(2n + 1) {
   background-color: #d3dce6;
+}
+#selection-type {
+  margin-bottom: 10px;
+  position: absolute;
+  top: 100px;
+  right: 10px;
 }
 </style>
