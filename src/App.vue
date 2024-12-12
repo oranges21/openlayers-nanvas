@@ -31,7 +31,7 @@
       @change="onSelectionChange"
     >
       <option value="point">点选</option>
-      <option value="box">框选</option>
+      <!-- <option value="box">框选</option> -->
       <option value="Circle">圈选</option>
       <option value="Polygon">面选</option>
       <option value="LineString">线选</option>
