@@ -36,6 +36,7 @@
       <option value="Polygon">面选</option>
       <option value="LineString">线选</option>
     </select>
+    <button id="locate-Switch" @click="offSwitch">关闭框选</button>
   </div>
 </template>
 
@@ -83,7 +84,9 @@ let locateToChengdu;
 let selectInteraction; // 用于存储当前的选择交互
 let drawInteraction; // 用于存储绘图交互
 let onSelectionChange;
-const selectionType = ref("point"); // 默认选择类型为点选
+let offSwitch;
+let selectSwitch = ref(false);
+const selectionType = ref(""); // 默认选择类型为点选
 // 当组件挂载时调用 initMap 函数初始化地图
 onMounted(() => {
   initMap();
@@ -124,7 +127,7 @@ const initMap = () => {
       width: 1, // 描边宽度
     }),
   });
-  // 使用定义好的样式创建一个向量图层来展示中国省份边界
+  // // 使用定义好的样式创建一个向量图层来展示中国省份边界
   const vectorLayer = new VectorLayer({
     source: vectorSource,
     style: style,
@@ -203,6 +206,23 @@ const initMap = () => {
     source: clusterSource,
     style: clusterStyleFunction,
   });
+  // 创建一个新的向量源专门用于框选绘制
+  const drawSource = new VectorSource();
+
+  // 创建一个向量图层来展示框选绘制结果
+  const drawLayer = new VectorLayer({
+    source: drawSource,
+    style: new Style({
+      stroke: new Stroke({
+        color: "#ffcc00", // 明亮黄色描边
+        width: 2,
+      }),
+      fill: new Fill({
+        color: "rgba(255, 204, 0, 0.1)", // 半透明填充色
+      }),
+    }),
+  });
+
   // 创建地图实例，包含基础图层、经纬网图层、省份边界图层和用户标记图层
   const map = new Map({
     layers: [
@@ -211,6 +231,7 @@ const initMap = () => {
       }),
       vectorLayer, // 添加省份边界图层
       markerLayer, // 添加用户标记图层
+      drawLayer, // 框选绘制图层
     ],
     target: "map", // 指定地图渲染的目标容器 ID
     view: new View({
@@ -226,35 +247,33 @@ const initMap = () => {
   // 监听地图上的单击事件，用于添加新标记或显示现有标记的 Popup
   let selectedMarker = null;
   map.on("singleclick", (evt) => {
-    const coordinate = evt.coordinate; // 获取点击的坐标
-    const feature = map.forEachFeatureAtPixel(evt.pixel, function (feature) {
-      return feature; // 检查点击位置是否有特征（即标记）
-    });
-
-    if (feature) {
-      // 如果点击的是标记，则显示 Popup
-      const geometry = feature.getGeometry(); // 获取标记的几何对象
-      const coord = geometry.getCoordinates(); // 获取标记的坐标
-      content.innerHTML = `<p>你点击的位置是： ${coord}</p>`; // 设置 Popup 内容
-      overlay.setPosition(coord); // 设置 Popup 位置
-      container.classList.add("ol-popup-visible"); // 显示 Popup
-      selectedMarker = feature; // 记录选中的标记
-    } else {
-      //关闭弹窗
-      overlay.setPosition(undefined); // 移除 Popup 的位置属性，使其不可见
-      container.classList.remove("ol-popup-visible"); // 移除可见样式类
-      // 如果没有点击到任何标记，则添加新的标记
-      const pointFeature = new Feature({
-        geometry: new Point(coordinate), // 创建新的点特征
+    if (!selectSwitch.value) {
+      const coordinate = evt.coordinate; // 获取点击的坐标
+      const feature = map.forEachFeatureAtPixel(evt.pixel, function (feature) {
+        return feature; // 检查点击位置是否有特征（即标记）
       });
-      markerSource.addFeature(pointFeature); // 将新标记添加到向量源
-      //打印标记的点
-      console.log(coordinate);
-
-      // 默认情况下不显示 Popup，除非点击了标记
-      if (!selectedMarker) {
-        overlay.setPosition(undefined); // 移除 Popup 位置
-        container.classList.remove("ol-popup-visible"); // 隐藏 Popup
+      if (feature) {
+        // 如果点击的是标记，则显示 Popup
+        const geometry = feature.getGeometry(); // 获取标记的几何对象
+        const coord = geometry.getCoordinates(); // 获取标记的坐标
+        content.innerHTML = `<p>你点击的位置是： ${coord}</p>`; // 设置 Popup 内容
+        overlay.setPosition(coord); // 设置 Popup 位置
+        container.classList.add("ol-popup-visible"); // 显示 Popup
+        selectedMarker = feature; // 记录选中的标记
+      } else {
+        //关闭弹窗
+        overlay.setPosition(undefined); // 移除 Popup 的位置属性，使其不可见
+        container.classList.remove("ol-popup-visible"); // 移除可见样式类
+        // 如果没有点击到任何标记，则添加新的标记
+        const pointFeature = new Feature({
+          geometry: new Point(coordinate), // 创建新的点特征
+        });
+        markerSource.addFeature(pointFeature); // 将新标记添加到向量源
+        // 默认情况下不显示 Popup，除非点击了标记
+        if (!selectedMarker) {
+          overlay.setPosition(undefined); // 移除 Popup 位置
+          container.classList.remove("ol-popup-visible"); // 隐藏 Popup
+        }
       }
     }
   });
@@ -297,6 +316,7 @@ const initMap = () => {
   }
   // 创建 Select 交互实例，用于选择特征
   const select = (type) => {
+    selectSwitch.value = "ture";
     console.log("select函数内type：", type);
     console.log("储存的当前选择交互", selectInteraction);
     console.log("储存的当前绘图交互", drawInteraction);
@@ -319,14 +339,14 @@ const initMap = () => {
         // 遍历被选中的特征并打印它们的坐标
         selectedFeatures.forEach((feature) => {
           const coord = feature.getGeometry().getCoordinates();
-          console.log("Selected point coordinates:", coord);
+          console.log("选择的目标点坐标:", coord);
         });
       });
       map.addInteraction(selectInteraction);
     } else {
       //给点选和框选两个分支，其他的按照原来的值定义的type
       drawInteraction = new Draw({
-        source: vectorSource, // 使用省份边界向量源作为临时绘图源
+        source: drawSource, // 使用省份边界向量源作为临时绘图源
         type: type === "box" ? "LineString" : type, // 框选实际是画一个矩形
       });
       map.addInteraction(drawInteraction);
@@ -353,7 +373,7 @@ const initMap = () => {
           console.log(coord);
         });
         // 移除绘制的几何体
-        vectorSource.clear();
+        drawSource.clear();
         // 如果是框选，则移除绘制的矩形
         if (type === "box") {
           // 创建矩形多边形并添加到源中
@@ -375,8 +395,8 @@ const initMap = () => {
             });
 
             // 添加多边形到向量源并移除原来的 LineString
-            vectorSource.addFeature(polygonFeature);
-            vectorSource.removeFeature(event.feature);
+            drawSource.addFeature(polygonFeature);
+            drawSource.removeFeature(event.feature);
           }
           map.removeInteraction(drawInteraction);
           drawInteraction = null;
@@ -389,6 +409,35 @@ const initMap = () => {
       // }
     }
   };
+  offSwitch = () => {
+    console.log("关闭框选");
+    selectSwitch.value = "false";
+    // 清除绘制源中的所有特征
+    if (drawSource) {
+      drawSource.clear();
+    }
+
+    // 移除绘制交互（如果存在）
+    if (drawInteraction) {
+      map.removeInteraction(drawInteraction);
+      drawInteraction = null;
+    }
+
+    // 如果有选择交互也一并移除
+    if (selectInteraction) {
+      map.removeInteraction(selectInteraction);
+      selectInteraction = null;
+    }
+
+    // 假设 selectionType 是一个引用到选择模式切换UI元素的变量
+    // 这里将其值设置为空字符串或默认选项
+    selectionType.value = ""; // 或者设置为默认选项的值
+
+    // 将 selectSwitch 设置为 false，确保它是一个布尔值
+    selectSwitch.value = false;
+
+    console.log("框选已关闭");
+  };
   // 添加选择模式切换按钮或下拉菜单
   // 这里假设你已经有了一个选择模式切换的UI元素
   onSelectionChange = (e) => {
@@ -398,7 +447,7 @@ const initMap = () => {
   };
   // 初始化默认的选择交互
   //首次会加载一次
-  select(selectionType.value);
+  // select(selectionType.value);
   console.log("init finished"); // 初始化完成后的日志输出
 };
 </script>
@@ -509,6 +558,11 @@ const initMap = () => {
   margin-bottom: 10px;
   position: absolute;
   top: 100px;
+  right: 10px;
+}
+#locate-Switch {
+  position: absolute;
+  top: 50px;
   right: 10px;
 }
 </style>
