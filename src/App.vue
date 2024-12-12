@@ -367,7 +367,7 @@ const initMap = () => {
           }
         });
         // 打印所有被选中的特征坐标
-        console.log("Selected features coordinates:");
+        console.log("选中的目标坐标:");
         features.forEach((feature) => {
           const coord = feature.getGeometry().getCoordinates();
           console.log(coord);
