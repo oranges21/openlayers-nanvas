@@ -9,7 +9,7 @@
       <!-- 关闭按钮，点击后会隐藏 Popup -->
       <a href="#" id="popup-closer" class="ol-popup-closer"></a>
       <div class="block text-center" m="t-4">
-        <el-carousel trigger="click" height="150px">
+        <el-carousel trigger="click" height="150px" v-if="showPicture">
           <el-carousel-item v-for="item in 4" :key="item">
             <!-- <h3 class="small justify-center" text="2xl">{{ item }}</h3> -->
             <img
@@ -19,6 +19,19 @@
             />
           </el-carousel-item>
         </el-carousel>
+        <div v-else>视频</div>
+        <el-button
+          type="primary"
+          style="margin-top: 5px"
+          @click="() => (showPicture = true)"
+          >图片</el-button
+        >
+        <el-button
+          type="primary"
+          style="margin-top: 5px"
+          @click="() => (showPicture = false)"
+          >视频</el-button
+        >
       </div>
       <!-- 弹窗的内容区域 -->
       <div id="popup-content"></div>
@@ -86,6 +99,7 @@ let drawInteraction; // 用于存储绘图交互
 let onSelectionChange;
 let offSwitch;
 let selectSwitch = ref(false);
+let showPicture = ref(true);
 const selectionType = ref(""); // 默认选择类型为点选
 // 当组件挂载时调用 initMap 函数初始化地图
 onMounted(() => {
@@ -285,7 +299,7 @@ const initMap = () => {
     // 使用 animate 方法平滑地改变地图视图的位置和缩放级别
     map.getView().animate({
       center: chengduCoordinate,
-      zoom: 10, // 设置你想要的缩放级别
+      zoom: 12, // 设置你想要的缩放级别
       duration: 2000, // 动画持续时间，单位是毫秒
     });
   };
