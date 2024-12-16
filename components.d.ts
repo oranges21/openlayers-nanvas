@@ -31,6 +31,7 @@ declare module 'vue' {
     '24.定位demo': typeof import('./src/components/24.定位demo.vue')['default']
     '25.绘图demo': typeof import('./src/components/25.绘图demo.vue')['default']
     '26.简单绘图demo': typeof import('./src/components/26.简单绘图demo.vue')['default']
+    '27.FLV.js处理视频': typeof import('./src/components/27.FLV.js处理视频.vue')['default']
     ElButton: typeof import('element-plus/es')['ElButton']
     ElCarousel: typeof import('element-plus/es')['ElCarousel']
     ElCarouselItem: typeof import('element-plus/es')['ElCarouselItem']
