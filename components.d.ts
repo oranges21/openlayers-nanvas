@@ -34,6 +34,8 @@ declare module 'vue' {
     '27.FLV.js处理视频': typeof import('./src/components/27.FLV.js处理视频.vue')['default']
     '28.canvasDemo': typeof import('./src/components/28.canvasDemo.vue')['default']
     '29.提炼的框选demo': typeof import('./src/components/29.提炼的框选demo.vue')['default']
+    '30.地图线转面的框选': typeof import('./src/components/30.地图线转面的框选.vue')['default']
+    '草稿': typeof import('./src/components/草稿.vue')['default']
     ElButton: typeof import('element-plus/es')['ElButton']
     ElCarousel: typeof import('element-plus/es')['ElCarousel']
     ElCarouselItem: typeof import('element-plus/es')['ElCarouselItem']
